@@ -8,8 +8,10 @@ def inicializar(n,m,T):
     W = [[Bool(f"W_{i}_{j}") for j in range(m)] for i in range(n)]
     return Solver(), P, C, M, W
 def ler_tabuleiro():
+    #Essa é a função que constroi o tabuleiro onde '#' é uma parede,'S' é o jogador,'B' é a caixa e 'M' é a meta
     print("\n Insira o tabuleiro linha por linha e digite 'f' para terminar:")
     tabuleiro = []
+    caracteres_validos = {'#','S','B','M',' ','X'}
     comprimento_referencia = None
     while True:
         linha = input().strip()
@@ -18,6 +20,9 @@ def ler_tabuleiro():
         if not linha:
             print("Linha vazia ignorada, digite 'f' para terminar.")
             continue
+        if not all(caractere in caracteres_validos for caractere in linha):
+            print(f"Erro: Use apenas os caracteres válidos: {', '.join(caracteres_validos)}")
+            continue
         if comprimento_referencia is None:
             comprimento_referencia = len(linha)
         elif len(linha) != comprimento_referencia:
@@ -25,3 +30,16 @@ def ler_tabuleiro():
             continue
         tabuleiro.append(linha)
     return tabuleiro
+def restricoes(solver, P,C,M,W,tabuleiro,m,n,T):
+    #Configurando o tabuleiro
+    for i in range(n):
+        for j in range(m):
+            char = tabuleiro[i][j]
+            if char == '#':
+                solver.add(W[i][j])
+            elif char == 'M':
+                solver.add(M[i][j])
+            elif char in ['S','X']:
+                solver.add(P[i][j][0])
+            elif char == 'B':
+                solver.add(C[i][j][0])
