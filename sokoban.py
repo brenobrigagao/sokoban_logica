@@ -33,6 +33,7 @@ def ler_tabuleiro():
         tabuleiro.append(linha)
     return tabuleiro
 def validar_elementos_tabuleiro(tabuleiro):
+    #Temos que garantir que haverá apenas um jogador, além de o número de caixas e metas seram os mesmos, e maior que zero
     jogador = sum(linha.count('S') for linha in tabuleiro)
     caixas = sum(linha.count('B') for linha in tabuleiro)
     metas = sum(linha.count('M') for linha in tabuleiro)
@@ -112,4 +113,28 @@ def restricoes(solver, P,C,M,W,tabuleiro,m,n,T):
         Implies(M[i][j], C[i][j][T])
         for i in range(n) for j in range(m)
     ]))
+def imprimir_solucao(modelo,P,C,M,W,n,m,T):
+    #Função para imprimirmos a solução
+    for t in range(T + 1):
+        print(f"\n--- Passo {t} ---")
+        for i in range(n):
+            linha = ""
+            for j in range(m):
+                parede = modelo.evaluate(W[i][j])
+                meta = modelo.evaluate(M[i][j])
+                caixa = modelo.evaluate(C[i][j][t])
+                jogador = modelo.evaluate(P[i][j][t])
 
+            if parede:
+                linha += "#"
+            elif jogador:
+                linha += "S"
+            elif caixa and meta:
+                linha += "*"
+            elif caixa:
+                linha += "B"
+            elif meta:
+                linha += "m"
+            else:
+                linha += "."
+        print(linha)
