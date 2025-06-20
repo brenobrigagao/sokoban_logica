@@ -1,4 +1,6 @@
 from z3 import *
+from z3 import Solver, Bool, And, Or, Not, Implies, Exactly, sat
+
 
 def inicializar(n,m,T):
     #Definindo as variáveis atômicas, o P representa o Jogador, C uma caixa, M o objetivo e W uma parede
@@ -43,3 +45,22 @@ def restricoes(solver, P,C,M,W,tabuleiro,m,n,T):
                 solver.add(P[i][j][0])
             elif char == 'B':
                 solver.add(C[i][j][0])
+    #Exatamente um jogador em cada tempo
+    for t in range(T + 1):
+       solver.add(Exactly(*[P[i][j][t] for i in range(n) for j in range(m)],1)) 
+       #Nenhuma sobreposição de jogador e caixa
+       for i in range(n):
+           for j in range(m):
+               if tabuleiro == '#':
+                   for t in range(T + 1):
+                       solver.add(Not(P[i][j][t]))
+                       solver.add(Not(C[i][j][t]))
+    #Movimentação do jogador e das caixas
+    direcoes = [(0,1),(1,0),(0,-1),(-1,0)]
+    for t in range(T):
+        for i in range(n):
+            for j in range(m):
+                movimentos = []
+
+                for di, dj, in direcoes:
+                    ni, nj = i + di, j + dj
