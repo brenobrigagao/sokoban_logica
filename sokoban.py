@@ -64,3 +64,36 @@ def restricoes(solver, P,C,M,W,tabuleiro,m,n,T):
 
                 for di, dj, in direcoes:
                     ni, nj = i + di, j + dj
+
+                    if 0 <= ni < n and 0 <= nj < m:
+                        #Movimentos simples, sem empurrar uma caixa
+                        movimentos.append(And(
+                            P[i][j][t],
+                            Not(W[ni][nj]),
+                            Not(C[ni][nj][t]),
+                            P[ni][nj][t + 1],
+                            *[C[x][y][t] == C[x][y][t + 1] for x in range(n) for y in range(m)]
+                        ))
+
+                        #Movimentos empurrando uma caixa
+                        ni2, nj2, = ni + di , nj + dj
+                        if 0 <= ni2 < n and 0 <= nj2 < m:
+                            movimentos.append(And(
+                                P[i][j][t],
+                                C[ni][nj][t],
+                                Not(W[ni2][nj2]),
+                                Not(C[ni2][nj2][t]),
+                                P[ni][nj][t+1],
+                                C[ni2][nj2][t + 1],
+                                Not(C[ni][nj][t + 1]),
+                                *[C[x][y][t] == C[x][y][t + 1] for x in range(n) for y in range(m)
+                                if (x,y) not in [(ni,nj), (ni2,nj2)]]
+                            ))
+                if movimentos:
+                    solver.add(Implies(P[i][j][t], Or(*movimentos)))
+    #Todas as metas devem ter uma caixa!!
+    solver.add(And([
+        Implies(M[i][j], C[i][j][T])
+        for i in range(n) for j in range(m)
+    ]))
+
