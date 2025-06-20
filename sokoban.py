@@ -138,3 +138,36 @@ def imprimir_solucao(modelo,P,C,M,W,n,m,T):
             else:
                 linha += "."
         print(linha)
+def main():
+    print("=== Sokoban em Z3 ===")
+    #Loop para garantir que o tabuleiro de entrada seja válido
+    while True:
+        try:
+            tabuleiro = ler_tabuleiro()
+            validar_elementos_tabuleiro(tabuleiro)
+            break
+        except ValueError as erro:
+            print(f"\n{erro}")
+            print("Insira o tabuleiro novamente!!\n")
+    n, m = len(tabuleiro),len(tabuleiro[0])
+    #Aqui tentamos achar uma solução com o menor número de passoas possível
+    T = 1
+    T_max = 50
+    #Coloquei um limite de 50 passos para não ficar muito grande
+    while T <= T_max:
+        print(f"\nTestando com {T} passos:\n")
+        solver,P,C,M,W = inicializar(n,m,T)
+        restricoes(solver,P,C,M,W,tabuleiro,m,n,T)
+
+        if solver.check() == sat:
+            modelo = solver.model()
+            print(f"\n Solução encontrada em {T} passos!!")
+            imprimir_solucao(modelo, P,C,M,W,n,m,T)
+            break
+        else:
+            print(f"\nSem solução com {T} passos.")
+            T += 1
+    else:
+        print(f"Nenhuma solução foi encontrada dentro do número máximo de passos: {T_max}")
+if __name__ == "__main__":
+    main()
