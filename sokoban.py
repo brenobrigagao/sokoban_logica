@@ -32,6 +32,22 @@ def ler_tabuleiro():
             continue
         tabuleiro.append(linha)
     return tabuleiro
+def validar_elementos_tabuleiro(tabuleiro):
+    jogador = sum(linha.count('S') for linha in tabuleiro)
+    caixas = sum(linha.count('B') for linha in tabuleiro)
+    metas = sum(linha.count('M') for linha in tabuleiro)
+    if jogador != 1:
+        raise ValueError(f"Erro: O tabuleiro deve ter exatamente 1 jogador ('S'). Encontrado: {jogador}.")
+    if caixas == 0:
+        raise ValueError("Erro: O tabuleiro deve ter pelo menos 1 caixa ('B').")
+    if metas == 0:
+        raise ValueError("Erro: O tabuleiro deve ter pelo menos 1 meta ('M').")
+    if caixas != metas:
+        raise ValueError(f"Erro: O número de caixas ('B') deve ser igual ao número de metas ('M'). "
+                         f"Caixas: {caixas}, Metas: {metas}.")
+
+    print("✅ Tabuleiro válido!")
+
 def restricoes(solver, P,C,M,W,tabuleiro,m,n,T):
     #Configurando o tabuleiro
     for i in range(n):
