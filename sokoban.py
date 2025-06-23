@@ -1,4 +1,4 @@
-# Importacoes
+# Importações
 
 from z3 import *
 
@@ -13,11 +13,11 @@ def inteiro_para_posicao(numero, colunas):
 
 # Input 
 
-tamanho = [10,10] # [n,m]
-jogador = [0,0,0] # [i,j,t]
-caixas = [[1,1,0], [2,2,0], [3,3,0]] # [i,j,t]
-paredes = [[4,4], [5,5], [6,6]] # [i,j]
-metas = [[7,7], [8,8], [9,9]] # [i,j]
+tamanho = [10,10] 
+jogador = [0,0,0]
+caixas = [[1,1,0], [2,2,0], [3,3,0]]
+paredes = [[4,4], [5,5], [6,6]] 
+metas = [[7,7], [8,8], [9,9]] 
 movimentos = 50
 
 # O Jogador ocupa exatamente uma celula no turno i, para i >= 0.
@@ -176,21 +176,3 @@ for caixa in range(len(caixas)):
 
 caixa_empurrada_direita = And(*caixa_empurrada_direita)
 
-# Existe exatamente um turno i onde cada caixa c ocupa exatamente uma meta, para c >= 0.
-
-existe_um_turno_onde_cada_caixa_ocupa_uma_meta = []
-
-permutacoes = [list(p) for p in permutations(range(len(caixas)))] # as caixas sao numeradas de 0 a len(caixas) - 1, permuto essa lista de numeros distintos.
-
-for t1 in range(movimentos+1):
-  for t2 in range(t1,movimentos+1):
-    for permutacao in permutacoes:
-      lista = []
-      for p in range(len(permutacao)): 
-        lista.append(Bool(f'caixa_{permutacao[p]}({metas[p][0]},{metas[p][1]},{t2})'))
-    if (t1 == t2):
-      existe_um_turno_onde_cada_caixa_ocupa_uma_meta.append((And(*lista)))
-    else:
-      existe_um_turno_onde_cada_caixa_ocupa_uma_meta.append(Not(And(*lista)))
-
-existe_um_turno_onde_cada_caixa_ocupa_uma_meta = Or(*existe_um_turno_onde_cada_caixa_ocupa_uma_meta)
