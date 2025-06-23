@@ -6,67 +6,64 @@ from itertools import permutations
 
 # Transforma um numero inteiro em um par ordenado de uma matriz n x m
 
-def inteiro_para_posicao(numero, colunas):
-  i = numero // colunas  
-  j = numero % colunas  
-  return (i, j)
+def posicao_1D_para_posicao_2D(posicao_1D, colunas):
+  i = posicao_1D // colunas  
+  j = posicao_1D % colunas  
+  return (i,j)
+
+# Função para criar um Bool que representa a coordenada espaço-temporal do jogador (i,j,t).
+
+def jogador_posicao_turno(posicao, turno):
+  return f'jogador({posicao[0]},{posicao[1]},{turno})'
+
+# Função para criar um Bool que representa a coordenada espaço-temporal de uma caixa (i,j,t).
+
+def caixa_numero_posicao_turno(numero, posicao, turno):
+  return f'caixa_{numero}({posicao[0]},{posicao[1]},{turno})'
 
 # Input 
 
-tamanho = [10,10] 
+tamanho = [10,10]
+posicoes = linhas * colunas 
 jogador = [0,0,0]
 caixas = [[1,1,0], [2,2,0], [3,3,0]]
 paredes = [[4,4], [5,5], [6,6]] 
 metas = [[7,7], [8,8], [9,9]] 
 movimentos = 50
+turnos = 50
+
 
 # O Jogador ocupa exatamente uma celula no turno i, para i >= 0.
 
-jogador_ocupa_uma_celula = []
+jogador_ocupa_exatamente_uma_celula = []
 
-for t in range(movimentos+1):
-  lista_1 = []
-  for k in range(tamanho[0] * tamanho[1]):
-    lista_2 = []
-    for i in range(tamanho[0]):
-      for j in range(tamanho[1]):
-        if (inteiro_para_posicao(k,tamanho[1]) == (i,j)):
-          lista_2.append(Bool(f'jogador_{i}_{j}_{t}'))
-        else:
-          lista_2.append(Not(Bool(f'jogador_{i}_{j}_{t}')))
-    lista_1.append(And(*lista_2))
-  jogador_ocupa_uma_celula.append(Or(*lista_1))
+for turno in range(movimentos+1):
+  bools = [Bool(jogador_posicao_turno((posicao_1D_para_posicao_2D(posicao)[0],posicao_1D_para_posicao_2D(posicao)[1]),turno)) for posicao in range(posicoes)]
+  soma = Sum([If(b,1,0) for b in bools])
+  jogador_ocupa_exatamente_uma_celula.append(soma == 1)
 
-jogador_ocupa_uma_celula = And(*jogador_ocupa_uma_celula)
-
+jogador_ocupa_exatamente_uma_celula = And(*jogador_ocupa_exatamente_uma_celula)
+  
 # A caixa c ocupa exatamente uma celula no turno i, para c >= 0 e i >= 0.
 
-caixa_ocupa_uma_celula = []
+caixa_ocupa_exatamente_uma_celula = []
 
-for caixa in range(len(caixas)):
-  for t in range(movimentos+1):
-    lista_1 = []
-    for k in range(tamanho[0] * tamanho[1]):
-      lista_2 = []
-      for i in range(tamanho[0]):
-        for j in range(tamanho[1]):
-          if (inteiro_para_posicao(k,tamanho[1]) == (i,j)):
-            lista_2.append(Bool(f'caixa_{i}_{j}_{t}'))
-          else:
-            lista_2.append(Not(Bool(f'caixa_{i}_{j}_{t}')))
-      lista_1.append(And(*lista_2))
-    caixa_ocupa_uma_celula.append(Or(*lista_1))
+for numero in range(len(caixas)):
+  for turno in range(movimentos+1):
+    bools = [Bool(caixa_numero_posicao_turno(numero,(posicao_1D_para_posicao_2D(posicao)[0],posicao_1D_para_posicao_2D(posicao)[1]),turno)) for posicao in range(posicoes)]
+    soma = Sum([If(b,1,0) for b in bools]) 
+    caixa_ocupa_exatamente_uma_celula.append(soma == 1)
 
-caixa_ocupa_uma_celula = And(*caixa_ocupa_uma_celula)
+caixa_ocupa_exatamente_uma_celula = And(*caixa_ocupa_exatamente_uma_celula)
 
 # O jogador nao pode ocupar a mesma celula que uma caixa.
 
 jogador_nao_ocupa_caixa = []
 
-for caixa in range(len(caixas)):
-  for t in range(movimentos+1): 
-    for k in range(tamanho[0] * tamanho[1]):
-      jogador_nao_ocupa_caixa.append(Not(And(Bool(f'jogador({i},{j},{t})'), Bool(f'caixa_{caixa}({i},{j},{t})')))) # ajeitar 
+for numero in range(len(caixas)):
+  for turno in range(movimentos+1): 
+    for posicao in range(posicoes):
+      jogador_nao_ocupa_caixa.append(Not(And(Bool(jogador_posicao_turno(posicao_1D_para_posicao_2D(), posicao_1D_para_posicao_2D),turno))) 
 
 jogador_nao_ocupa_caixa = And(*jogador_nao_ocupa_caixa)
 
