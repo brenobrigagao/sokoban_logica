@@ -65,9 +65,11 @@ jogador_nao_ocupa_caixa = []
 for numero in range(len(caixas)):
   for turno in range(turnos+1): 
     for posicao in range(posicoes):
-      jogador_nao_ocupa_caixa.append(Not(And(
-        Bool(jogador_posicao_turno(posicao_1D_para_posicao_2D(posicao,colunas),turno)),
-        Bool(caixa_numero_posicao_turno(numero,posicao_1D_para_posicao_2D(posicao,colunas),turno))))) 
+      jogador_nao_ocupa_caixa.append(
+        Not(
+          And(
+            Bool(jogador_posicao_turno(posicao_1D_para_posicao_2D(posicao,colunas),turno)),
+            Bool(caixa_numero_posicao_turno(numero,posicao_1D_para_posicao_2D(posicao,colunas),turno))))) 
 
 jogador_nao_ocupa_caixa = And(*jogador_nao_ocupa_caixa)
 
@@ -77,7 +79,9 @@ jogador_nao_ocupa_parede = []
 
 for parede in paredes:
   for turno in range(turnos+1):
-    jogador_nao_ocupa_parede.append(Not(Bool(jogador_posicao_turno(parede[0],parede[1],turno)))) 
+    jogador_nao_ocupa_parede.append(
+      Not(
+        Bool(jogador_posicao_turno((parede[0],parede[1]),turno)))) 
 
 jogador_nao_ocupa_parede = And(*jogador_nao_ocupa_parede)
 
@@ -89,112 +93,151 @@ for numero_1 in range(len(caixas)):
   for numero_2 in range(numero_1+1,len(caixas)):
     for turno in range(turnos+1):
       for posicao in range(posicoes):
-        caixa_nao_ocupa_caixa.append(Not(And(
-          Bool(caixa_numero_posicao_turno(numero_1,posicao_1D_para_posicao_2D(posicao,colunas),turno)),
-          Bool(caixa_numero_posicao_turno(numero_2,posicao_1D_para_posicao_2D(posicao,colunas),turno)))))
+        caixa_nao_ocupa_caixa.append(
+          Not(
+            And(
+              Bool(caixa_numero_posicao_turno(numero_1,posicao_1D_para_posicao_2D(posicao,colunas),turno)),
+              Bool(caixa_numero_posicao_turno(numero_2,posicao_1D_para_posicao_2D(posicao,colunas),turno)))))
+        
+caixa_nao_ocupa_caixa = And(*caixa_nao_ocupa_caixa)
 
 # Uma caixa nao pode ocupar a mesma celula que uma parede.
 
 caixa_nao_ocupa_parede = []
 
-for numero in len(caixas):
+for numero in range(len(caixas)):
   for parede in paredes:
     for turno in range(turnos+1):
-       caixa_nao_ocupa_parede.append(Not(Bool(caixa_numero_posicao_turno(numero,parede[0],parede[1],turno))))
+       caixa_nao_ocupa_parede.append(
+          Not(
+            Bool(caixa_numero_posicao_turno(numero,(parede[0],parede[1]),turno))))
 
 caixa_nao_ocupa_parede = And(*caixa_nao_ocupa_parede)
 
-# Ou uma caixa permanece em repouso durante dois turnos consecutivos Ou o jogador empurra a caixa.
+# O jogador se move exatamente uma celula por turno.
+
+jogador_move_exatamente_uma_celula = []
+
+for turno in range(turnos):
+  for linha in range(linhas):
+    for coluna in range(colunas):
+      movimentos_validos = []
+      if (linha - 1 >= 0): movimentos_validos.append(Bool(jogador_posicao_turno((linha-1,coluna),turno+1)))
+      if (linha + 1 < linhas): movimentos_validos.append(Bool(jogador_posicao_turno((linha+1,coluna),turno+1)))
+      if (coluna - 1 >= 0): movimentos_validos.append(Bool(jogador_posicao_turno((linha,coluna-1),turno+1)))
+      if (coluna + 1 < colunas): movimentos_validos.append(Bool(jogador_posicao_turno((linha,coluna+1),turno+1)))
+      jogador_move_exatamente_uma_celula.append(
+        Implies(
+          Bool(jogador_posicao_turno((linha,coluna),turno)),
+          Or(*movimentos_validos)))
+      
+jogador_move_exatamente_uma_celula = And(*jogador_move_exatamente_uma_celula)
+
+# Ou uma caixa permanece parada durante dois turnos consecutivos Ou o jogador empurra a caixa.
 
 caixa_repouso_ou_empurrada = []
 
 for numero in range(len(caixas)):
   for turno in range(turnos):
-    for i in range(linhas):
-      for j in range(colunas):
+    for linha in range(linhas):
+      for coluna in range(colunas):
         caixa_repouso_ou_empurrada.append(
-          Xor(
+          Or(
             And(
-              Bool(f'jogador({i},{j},{t+1})'),
-              Bool(f'caixa_{caixa}({i},{j},{t})')), 
+              Bool(caixa_numero_posicao_turno(numero,(linha,coluna),turno)), 
+              Bool(jogador_posicao_turno((linha,coluna),turno+1))),
             And(
-              Bool(f'caixa_{caixa}({i},{j},{t})'), 
-              Bool(f'caixa_{caixa}({i},{j},{t+1})'))))
+              Bool(caixa_numero_posicao_turno(numero,(linha,coluna),turno)), 
+              Bool(caixa_numero_posicao_turno(numero,(linha,coluna),turno+1)))))
 
 caixa_repouso_ou_empurrada = And(*caixa_repouso_ou_empurrada)
 
-# Se o jogador empurra a caixa para cima entao ela se move exatamente uma celula para cima.
+# Se o jogador empurra a caixa para baixo entao a caixa se move exatamente uma celula para baixo.
 
-caixa_empurrada_cima = []
+jogador_empurra_caixa_para_baixo = []
 
-for caixa in range(len(caixas)):
-  for t in range(movimentos):
-    for i in range(1,tamanho[0]-1):
-      for j in range(tamanho[1]):
-        caixa_empurrada_cima.append(
+for numero in range(len(caixas)):
+  for turno in range(turnos):
+    for linha in range(1,linhas-1):
+      for coluna in range(colunas):
+        jogador_empurra_caixa_para_baixo.append(
           Implies(
             And(
-              Bool(f'jogador({i},{j},{t+1})'),
-              Bool(f'caixa_{caixa}({i},{j},{t})'),
-              Bool(f'jogador({i},{j},{t+1})')), 
-            Bool()))
+              Bool(caixa_numero_posicao_turno(numero,(linha,coluna),turno)),
+              Bool(jogador_posicao_turno((linha-1,coluna),turno)),
+              Bool(jogador_posicao_turno((linha,coluna),turno+1))), 
+            Bool(caixa_numero_posicao_turno(numero,(linha+1,coluna),turno+1))))
 
-caixa_empurrada_cima = And(*caixa_empurrada_cima)
+jogador_empurra_caixa_para_baixo = And(*jogador_empurra_caixa_para_baixo)
 
-# Se o jogador empurra a caixa para cima entao ela se move exatamente uma celula para cima.
+# Se o jogador empurra a caixa para cima entao a caixa se move exatamente uma celula para cima.
 
+jogador_empurra_caixa_para_cima = []
 
-caixa_empurrada_baixo = []
-
-for caixa in range(len(caixas)):
-  for t in range(movimentos):
-    for i in range(1,tamanho[0]-1):
-      for j in range(tamanho[1]):
-        caixa_empurrada_baixo.append(
+for numero in range(len(caixas)):
+  for turno in range(turnos):
+    for linha in range(1,linhas-1):
+      for coluna in range(colunas):
+        jogador_empurra_caixa_para_cima.append(
           Implies(
             And(
-              Bool(f'jogador({i},{j},{t+1})'), 
-              Bool(f'caixa_{caixa}({i},{j},{t})'), 
-              Bool(f'jogador({i},{j},{t+1})')), 
-            Bool()))
+              Bool(caixa_numero_posicao_turno(numero,(linha,coluna),turno)),
+              Bool(jogador_posicao_turno((linha+1,coluna),turno)),
+              Bool(jogador_posicao_turno((linha,coluna),turno+1))), 
+            Bool(caixa_numero_posicao_turno(numero,(linha-1,coluna),turno+1))))
 
-caixa_empurrada_baixo = And(*caixa_empurrada_baixo)
+jogador_empurra_caixa_para_cima = And(*jogador_empurra_caixa_para_cima)
 
-# Se o jogador empurra a caixa para cima entao ela se move exatamente uma celula para cima.
+# Se o jogador empurra a caixa para a esquerda entao a caixa se move exatamente uma celula para a esquerda.
 
+jogador_empurra_caixa_para_esquerda = []
 
-caixa_empurrada_esquerda = []
+for numero in range(len(caixas)):
+  for turno in range(turnos):
+    for linha in range(linhas):
+      for coluna in range(1,colunas-1):
+        jogador_empurra_caixa_para_esquerda.append(
+          Implies(
+            And(
+              Bool(caixa_numero_posicao_turno(numero,(linha,coluna),turno)),
+              Bool(jogador_posicao_turno((linha,coluna+1),turno)),
+              Bool(jogador_posicao_turno((linha,coluna),turno+1))), 
+            Bool(caixa_numero_posicao_turno(numero,(linha,coluna-1),turno+1))))
 
-for caixa in range(len(caixas)):
-  for t in range(movimentos):
-    for i in range(1,tamanho[0]-1):
-      for j in range(tamanho[1]):
-        caixa_empurrada_baixo.append(Implies(And(Bool(f'jogador({i},{j},{t+1})'), Bool(f'caixa_{caixa}({i},{j},{t})'), Bool(f'jogador({i},{j},{t+1})')), Bool())) # type: ignore
+jogador_empurra_caixa_para_esquerda = And(*jogador_empurra_caixa_para_esquerda)
 
-caixa_empurrada_esquerda = And(*caixa_empurrada_esquerda)
+# Se o jogador empurra a caixa para a direita entao a caixa se move exatamente uma celula para a direita.
 
-# Se o jogador empurra a caixa para cima entao ela se move exatamente uma celula para cima.
+jogador_empurra_caixa_para_direita = []
 
+for numero in range(len(caixas)):
+  for turno in range(turnos):
+    for linha in range(linhas):
+      for coluna in range(1,colunas-1):
+        jogador_empurra_caixa_para_direita.append(
+          Implies(
+            And(
+              Bool(caixa_numero_posicao_turno(numero,(linha,coluna),turno)),
+              Bool(jogador_posicao_turno((linha,coluna-1),turno)),
+              Bool(jogador_posicao_turno((linha,coluna),turno+1))), 
+            Bool(caixa_numero_posicao_turno(numero,(linha,coluna+1),turno+1))))
 
-caixa_empurrada_direita = []
+jogador_empurra_caixa_para_direita = And(*jogador_empurra_caixa_para_direita)
 
-for caixa in range(len(caixas)):
-  for t in range(movimentos):
-    for i in range(1,tamanho[0]-1):
-      for j in range(tamanho[1]):
-        caixa_empurrada_baixo.append(Implies(And(Bool(f'jogador({i},{j},{t+1})'), Bool(f'caixa_{caixa}({i},{j},{t})'), Bool(f'jogador({i},{j},{t+1})')), Bool()))
+# Existe pelo menos um turno i onde o jogo termina.
 
-caixa_empurrada_direita = And(*caixa_empurrada_direita)
+indices_caixas = list(range(len(caixas)))
 
-# O jogador se move exatamente uma celula por turno.
+permutacoes_indices_caixas = list(permutations(indices_caixas))
 
-jogador_move_uma_celula = []
+existe_pelo_menos_um_turno_onde_jogo_termina = []
 
-for t in range(movimentos):
-  lista_1 = []
-  for k in range(tamanho[0] * tamanho[1]):
-    lista_2 = []
-    for l in range(tamanho[0] * tamanho[1]):
-      if (abs(inteiro_para_posicao(k) - inteiro_para_posicao(l)) in [(0,1), (1,0)]):
-        lista_2.append(Not(And(Bool(f'jogador({inteiro_para_posicao(k)[0]},{inteiro_para_posicao(k)[1]},{t})'), Bool(f'jogador({inteiro_para_posicao(l)[0]},{inteiro_para_posicao(l)[1]},{t+1})'))))
+for turno in range(turnos+1):
+  for permutacao in permutacoes_indices_caixas:
+    combinacoes_indices_caixas_metas = []
+    for meta in range(len(metas)):
+      combinacoes_indices_caixas_metas.append(caixa_numero_posicao_turno(permutacao[meta],(metas[meta][0],metas[meta][1]),turno))
+    existe_pelo_menos_um_turno_onde_jogo_termina.append(And(*combinacoes_indices_caixas_metas))
 
+existe_pelo_menos_um_turno_onde_jogo_termina = Or(*existe_pelo_menos_um_turno_onde_jogo_termina)
+    
