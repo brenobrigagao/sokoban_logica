@@ -310,7 +310,7 @@ def processar_matriz(matriz):
         for coluna_idx, char in enumerate(linha):
             if char == '#':
                 paredes.append([linha_idx, coluna_idx])
-            elif char == '.':
+            elif char == '.' or char == ' ':
                 pass  # espaço vazio
             elif char == 'S':
                 jogador = [linha_idx, coluna_idx]
@@ -375,7 +375,7 @@ def extrair_mapas_do_modelo(modelo, turnos, linhas, colunas, num_caixas, paredes
 
 # ---------------------------------------------------------------------------------------------
 
-def solucionar_sokoban(mapa, turnos_maximos=5):
+def solucionar_sokoban(mapa, turnos_maximos=30):
     """
     Tenta encontrar a menor quantidade de turnos necessária para resolver o mapa.
     Retorna o modelo do solver se encontrar solução, ou None se não houver solução.
@@ -423,19 +423,101 @@ def solucionar_sokoban(mapa, turnos_maximos=5):
     print("Não foi possível encontrar solução dentro do limite de turnos.")
     return None
 
-mapa_nivel1 = [
-    list("#######"),
-    list("#..m..#"),
-    list("#...B.#"),
-    list("#.B.S.#"),
-    list("#...m.#"),
-    list("#######"),
+# -------------------------------
+
+# --------------------------
+# Lista de mapas para testar
+# --------------------------
+
+mapa1 = [
+    list("######"),
+    list("#..m.#"),
+    list("#.B..#"),
+    list("#..S.#"),
+    list("######")
 ]
 
-mapas = solucionar_sokoban(mapa_nivel1,15)
+mapa2 = [
+    list("#######"),
+    list("#..m..#"),
+    list("#.B.B.#"),
+    list("#..S..#"),
+    list("#..m..#"),
+    list("#######")
+]
 
-for t, mapa in enumerate(mapas):
-    print(f"\nTurno {t}")
+mapa3 = [
+    list("########"),
+    list("#..m..m#"),
+    list("#.B..B.#"),
+    list("#..S...#"),
+    list("#......#"),
+    list("########")
+]
+
+mapa4 = [
+    list("#####"),
+    list("#mB.#"),
+    list("#.S.#"),
+    list("#.B.#"),
+    list("#.m.#"),
+    list("#####")
+]
+
+mapa_exemplo1 = [
+    list("######"),
+    list("#.m#  "),
+    list("#SB # "),
+    list("#  #  "),
+    list("######")
+]
+
+mapa_exemplo2 = [
+    list("######"),
+    list("#x   #"),
+    list("#BBBm#"),
+    list("#m   #"),
+    list("######")
+]
+
+mapa_exemplo3 = [
+    list("#####"),
+    list("#SBm#"),
+    list("#B  #"),
+    list("#m  #"),
+    list("#####")
+]
+
+mapa_exemplo4 = [
+    list("####### "),
+    list("##S##mm#"),
+    list("# BB Bm#"),
+    list("#  B   #"),
+    list("#### m# "),
+    list("####### ")
+]
+
+# Lista de todos os mapas
+mapas = [mapa1, mapa2, mapa3, mapa4, mapa_exemplo1, mapa_exemplo2, mapa_exemplo3, mapa_exemplo4]
+
+# --------------------------
+# Loop para imprimir e resolver cada mapa
+# --------------------------
+for idx, mapa in enumerate(mapas, 1):
+    print(f"\n=== Mapa {idx} ===")
     for linha in mapa:
         print(''.join(linha))
+    
+    print("\nResolvendo...")
 
+    # Chama sua função que já retorna os mapas turno a turno (ou None)
+    mapas_turnos = solucionar_sokoban(mapa, turnos_maximos=100)
+
+    if mapas_turnos:
+        print("Solução encontrada! Caminho passo a passo:")
+        for t, m in enumerate(mapas_turnos):
+            print(f"\nTurno {t}")
+            for linha in m:
+                print(''.join(linha))
+    else:
+        print("Não foi possível encontrar solução.\n")
