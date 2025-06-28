@@ -140,26 +140,44 @@ def jogador_move_exatamente_uma_celula(turnos,linhas,colunas):
 
   return jogador_move_exatamente_uma_celula
 
-# Ou uma caixa permanece parada durante dois turnos consecutivos Ou o jogador empurra a caixa.
+# Ou uma caixa permanece parada durante dois turnos consecutivos Ou o jogador empurra a caixa. (Consertadad)
+
 def caixa_repouso_ou_empurrada(caixas,turnos,linhas,colunas):
-  caixa_repouso_ou_empurrada = []
-
-  for numero in range(len(caixas)):
-    for turno in range(turnos):
-      for linha in range(linhas):
-        for coluna in range(colunas):
-          caixa_repouso_ou_empurrada.append(
-            Or(
-              And(
-                Bool(caixa_numero_posicao_turno(numero,(linha,coluna),turno)), 
-                Bool(jogador_posicao_turno((linha,coluna),turno+1))),
-              And(
-                Bool(caixa_numero_posicao_turno(numero,(linha,coluna),turno)), 
-                Bool(caixa_numero_posicao_turno(numero,(linha,coluna),turno+1)))))
-
-  caixa_repouso_ou_empurrada = And(*caixa_repouso_ou_empurrada)
-
-  return caixa_repouso_ou_empurrada
+    restricoes = []
+    for numero in range(len(caixas)):
+        for turno in range(turnos):
+            for linha in range(linhas):
+                for coluna in range(colunas):
+                    # Se a caixa está em (linha,coluna) no turno t
+                    # então no turno t+1 ela deve:
+                    # 1) permanecer no mesmo lugar, OU
+                    # 2) ter sido empurrada pelo jogador
+                    restricoes.append(
+                        Implies(
+                            Bool(caixa_numero_posicao_turno(numero,(linha,coluna),turno)),
+                            Or(
+                                Bool(caixa_numero_posicao_turno(numero,(linha,coluna),turno+1)),
+                                And(
+                                    Bool(jogador_posicao_turno((linha,coluna),turno+1)),
+                                    Or(
+                                        # Empurrada para cima
+                                        And(linha > 0, 
+                                            Bool(caixa_numero_posicao_turno(numero,(linha-1,coluna),turno+1))),
+                                        # Empurrada para baixo
+                                        And(linha < linhas-1, 
+                                            Bool(caixa_numero_posicao_turno(numero,(linha+1,coluna),turno+1))),
+                                        # Empurrada para esquerda
+                                        And(coluna > 0, 
+                                            Bool(caixa_numero_posicao_turno(numero,(linha,coluna-1),turno+1))),
+                                        # Empurrada para direita
+                                        And(coluna < colunas-1, 
+                                            Bool(caixa_numero_posicao_turno(numero,(linha,coluna+1),turno+1)))
+                                    )
+                                )
+                            )
+                        )
+                    )
+    return And(*restricoes)
 
 # Se o jogador empurra a caixa para baixo entao a caixa se move exatamente uma celula para baixo.
 
@@ -310,6 +328,53 @@ def processar_matriz(matriz):
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+def extrair_mapas_do_modelo(modelo, turnos, linhas, colunas, num_caixas, paredes=[], metas=[]):
+    """
+    Recebe o modelo do z3 e gera uma lista de mapas (listas de listas de caracteres)
+    mostrando o estado do jogo em cada turno.
+    """
+    mapas = []
+
+    for turno in range(turnos+1):
+        # cria o mapa base (pontos)
+        mapa = [['.' for _ in range(colunas)] for _ in range(linhas)]
+
+        # coloca paredes
+        for (linha, coluna) in paredes:
+            mapa[linha][coluna] = '#'
+
+        # coloca metas (se quiser diferenciar, opcional)
+        for (linha, coluna) in metas:
+            if mapa[linha][coluna] == '.':
+                mapa[linha][coluna] = 'm'
+
+        # procura jogador
+        for linha in range(linhas):
+            for coluna in range(colunas):
+                nome_bool = f'jogador({linha},{coluna},{turno})'
+                if modelo.eval(Bool(nome_bool), False):
+                    if mapa[linha][coluna] == 'm':
+                        mapa[linha][coluna] = 'x'  # jogador em cima de meta
+                    else:
+                        mapa[linha][coluna] = 'S'
+
+        # procura caixas
+        for numero in range(num_caixas):
+            for linha in range(linhas):
+                for coluna in range(colunas):
+                    nome_bool = f'caixa_{numero}({linha},{coluna},{turno})'
+                    if modelo.eval(Bool(nome_bool), False):
+                        if mapa[linha][coluna] == 'm':
+                            mapa[linha][coluna] = 'b'  # caixa em cima de meta
+                        else:
+                            mapa[linha][coluna] = 'B'
+
+        mapas.append(mapa)
+
+    return mapas
+
+# ---------------------------------------------------------------------------------------------
+
 def solucionar_sokoban(mapa, turnos_maximos=5):
     """
     Tenta encontrar a menor quantidade de turnos necessária para resolver o mapa.
@@ -352,8 +417,8 @@ def solucionar_sokoban(mapa, turnos_maximos=5):
         if solver.check() == sat:
             modelo = solver.model()
             print(f"Solução encontrada com {turnos} turnos!")
-            imprimir_solucao(modelo,turnos,linhas,colunas,caixas,metas,paredes)
-            return modelo
+            mapas = extrair_mapas_do_modelo(modelo,turnos,linhas,colunas,len(caixas),paredes,metas)
+            return mapas
 
     print("Não foi possível encontrar solução dentro do limite de turnos.")
     return None
@@ -367,48 +432,10 @@ mapa_nivel1 = [
     list("#######"),
 ]
 
-solucao = solucionar_sokoban(mapa_nivel1,15)
+mapas = solucionar_sokoban(mapa_nivel1,15)
 
-# --------------------
+for t, mapa in enumerate(mapas):
+    print(f"\nTurno {t}")
+    for linha in mapa:
+        print(''.join(linha))
 
-def imprimir_solucao(modelo, turnos, linhas, colunas, caixas_iniciais, metas, paredes):
-    print("\n--- Solução Encontrada ---")
-    for t in range(turnos + 1):
-        print(f"\nTurno {t}:")
-        grid = [['.' for _ in range(colunas)] for _ in range(linhas)]
-
-        for parede in paredes:
-            grid[parede[0]][parede[1]] = '#'
-
-        for meta in metas:
-            if grid[meta[0]][meta[1]] == '.':
-                grid[meta[0]][meta[1]] = 'm'
-
-        jogador_pos = None
-        for r in range(linhas):
-            for c in range(colunas):
-                if modelo.evaluate(Bool(f'jogador({r},{c},{t}))')):
-                    jogador_pos = (r, c)
-                    break
-            if jogador_pos: break
-
-        caixas_pos = {}
-        for n in range(len(caixas_iniciais)):
-            for r in range(linhas):
-                for c in range(colunas):
-                    if modelo.evaluate(Bool(f'caixa_{n}({r},{c},{t}))')):
-                        caixas_pos[n] = (r, c)
-                        break
-
-        if jogador_pos:
-            grid[jogador_pos[0]][jogador_pos[1]] = 'S'
-        for n, pos in caixas_pos.items():
-            if grid[pos[0]][pos[1]] == 'm':
-                grid[pos[0]][pos[1]] = '*'
-            elif grid[pos[0]][pos[1]] == '.':
-                grid[pos[0]][pos[1]] = 'B'
-            elif grid[pos[0]][pos[1]] == 'S':
-                grid[pos[0]][pos[1]] = 'X'
-
-        for row in grid:
-            print("".join(row))
