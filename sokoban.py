@@ -21,20 +21,6 @@ def jogador_posicao_turno(posicao,turno):
 def caixa_numero_posicao_turno(numero,posicao,turno):
   return f'caixa_{numero}({posicao[0]},{posicao[1]},{turno})'
 
-# Input 
-
-tamanho = [10,10]
-linhas = tamanho[0]
-colunas = tamanho[1]
-posicoes = linhas * colunas
-
-jogador = [0,0,0]
-caixas = [[1,1,0], [2,2,0], [3,3,0]]
-paredes = [[4,4], [5,5], [6,6]] 
-metas = [[7,7], [8,8], [9,9]] 
-
-turnos = 50
-
 # O jogador ocupa exatamente uma celula no turno i, para i >= 0
 
 def jogador_ocupa_exatamente_uma_celula(turnos,posicoes,colunas): 
@@ -99,7 +85,7 @@ def jogador_nao_ocupa_parede(turnos,paredes):
 
 # Duas caixas nao podem ocupar a mesma celula.
 
-def caixa_nao_ocupa_caixa(caixas,turnos,posicoes):
+def caixa_nao_ocupa_caixa(caixas,turnos,posicoes,colunas):
   caixa_nao_ocupa_caixa = []
 
   for numero_1 in range(len(caixas)):
@@ -309,13 +295,13 @@ def processar_matriz(matriz):
             elif char == '.':
                 pass  # espaço vazio
             elif char == 'S':
-                jogador = [linha_idx, coluna_idx, 0]
+                jogador = [linha_idx, coluna_idx]
             elif char == 'B':
-                caixas.append([linha_idx, coluna_idx, 0])
+                caixas.append([linha_idx, coluna_idx])
             elif char == 'm':
                 metas.append([linha_idx, coluna_idx])
             elif char == 'x':
-                jogador = [linha_idx, coluna_idx, 0]
+                jogador = [linha_idx, coluna_idx]
                 metas.append([linha_idx, coluna_idx])
             else:
                 raise ValueError(f"Caractere inválido encontrado: '{char}' na posição ({linha_idx}, {coluna_idx})")
@@ -324,7 +310,7 @@ def processar_matriz(matriz):
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def solucionar_sokoban(mapa, turnos_maximos=50):
+def solucionar_sokoban(mapa, turnos_maximos=5):
     """
     Tenta encontrar a menor quantidade de turnos necessária para resolver o mapa.
     Retorna o modelo do solver se encontrar solução, ou None se não houver solução.
@@ -338,13 +324,21 @@ def solucionar_sokoban(mapa, turnos_maximos=50):
 
         solver = Solver()
 
+        jogador_input = Bool(jogador_posicao_turno((jogador),0))
+        caixas_input = And([Bool(caixa_numero_posicao_turno(numero,(caixas[numero]),0)) for numero in range(len(caixas))])
+
+        # Adiciona Input
+
+        solver.add(jogador_input)
+        solver.add(caixas_input)
+
         # Adiciona todas as restrições ao solver
         solver.add(
             jogador_ocupa_exatamente_uma_celula(turnos, posicoes, colunas),
             caixa_ocupa_exatamente_uma_celula(caixas, turnos, posicoes, colunas),
             jogador_nao_ocupa_caixa(caixas, turnos, posicoes, colunas),
             jogador_nao_ocupa_parede(turnos, paredes),
-            caixa_nao_ocupa_caixa(caixas, turnos, posicoes),
+            caixa_nao_ocupa_caixa(caixas, turnos, posicoes,colunas),
             caixa_nao_ocupa_parede(caixas, turnos, paredes),
             jogador_move_exatamente_uma_celula(turnos, linhas, colunas),
             caixa_repouso_ou_empurrada(caixas, turnos, linhas, colunas),
@@ -358,6 +352,7 @@ def solucionar_sokoban(mapa, turnos_maximos=50):
         if solver.check() == sat:
             modelo = solver.model()
             print(f"Solução encontrada com {turnos} turnos!")
+            imprimir_solucao(modelo,turnos,linhas,colunas,caixas,metas,paredes)
             return modelo
 
     print("Não foi possível encontrar solução dentro do limite de turnos.")
@@ -366,10 +361,54 @@ def solucionar_sokoban(mapa, turnos_maximos=50):
 mapa_nivel1 = [
     list("#######"),
     list("#..m..#"),
-    list("#.B.B.#"),
+    list("#...B.#"),
     list("#.B.S.#"),
     list("#...m.#"),
     list("#######"),
 ]
 
-solucao = solucionar_sokoban(mapa_nivel1,100)
+solucao = solucionar_sokoban(mapa_nivel1,15)
+
+# --------------------
+
+def imprimir_solucao(modelo, turnos, linhas, colunas, caixas_iniciais, metas, paredes):
+    print("\n--- Solução Encontrada ---")
+    for t in range(turnos + 1):
+        print(f"\nTurno {t}:")
+        grid = [['.' for _ in range(colunas)] for _ in range(linhas)]
+
+        for parede in paredes:
+            grid[parede[0]][parede[1]] = '#'
+
+        for meta in metas:
+            if grid[meta[0]][meta[1]] == '.':
+                grid[meta[0]][meta[1]] = 'm'
+
+        jogador_pos = None
+        for r in range(linhas):
+            for c in range(colunas):
+                if modelo.evaluate(Bool(f'jogador({r},{c},{t}))')):
+                    jogador_pos = (r, c)
+                    break
+            if jogador_pos: break
+
+        caixas_pos = {}
+        for n in range(len(caixas_iniciais)):
+            for r in range(linhas):
+                for c in range(colunas):
+                    if modelo.evaluate(Bool(f'caixa_{n}({r},{c},{t}))')):
+                        caixas_pos[n] = (r, c)
+                        break
+
+        if jogador_pos:
+            grid[jogador_pos[0]][jogador_pos[1]] = 'S'
+        for n, pos in caixas_pos.items():
+            if grid[pos[0]][pos[1]] == 'm':
+                grid[pos[0]][pos[1]] = '*'
+            elif grid[pos[0]][pos[1]] == '.':
+                grid[pos[0]][pos[1]] = 'B'
+            elif grid[pos[0]][pos[1]] == 'S':
+                grid[pos[0]][pos[1]] = 'X'
+
+        for row in grid:
+            print("".join(row))
