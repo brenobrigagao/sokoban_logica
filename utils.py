@@ -1,8 +1,9 @@
 from z3 import Bool
+from z3 import is_true
 
 # Função para transformar uma coordenada 1D em uma coordenada 2D
 
-def posicao_1D_para_posicao_2D(posicao_1D, colunas):
+def posicao_1D_para_2D(posicao_1D, colunas):
   i = posicao_1D // colunas  
   j = posicao_1D % colunas  
   return (i,j)
@@ -86,7 +87,8 @@ def extrair_mapas_do_modelo(modelo, turnos, linhas, colunas, num_caixas, paredes
         for linha in range(linhas):
             for coluna in range(colunas):
                 nome_bool = f'jogador({linha},{coluna},{turno})'
-                if modelo.eval(Bool(nome_bool), False):
+                valor = modelo.eval(Bool(nome_bool), model_completion=False)
+                if is_true(valor):
                     if mapa[linha][coluna] == 'm':
                         mapa[linha][coluna] = 'x'  # jogador em cima de meta
                     else:
@@ -97,7 +99,8 @@ def extrair_mapas_do_modelo(modelo, turnos, linhas, colunas, num_caixas, paredes
             for linha in range(linhas):
                 for coluna in range(colunas):
                     nome_bool = f'caixa_{numero}({linha},{coluna},{turno})'
-                    if modelo.eval(Bool(nome_bool), False):
+                    valor = modelo.eval(Bool(nome_bool), model_completion=False)
+                    if is_true(valor):
                         if mapa[linha][coluna] == 'm':
                             mapa[linha][coluna] = 'b'  # caixa em cima de meta
                         else:
