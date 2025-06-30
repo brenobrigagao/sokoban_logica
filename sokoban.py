@@ -1,9 +1,173 @@
 from z3 import *
+from z3 import Solver, Bool, And, Or, Not, Implies, Exactly, sat
+
 
 def inicializar(n,m,T):
+    #Definindo as variáveis atômicas, o P representa o Jogador, C uma caixa, M o objetivo e W uma parede
     P = [[[Bool(f"P_{i}_{j}_{t}") for t in range(T+1)] for j in range(m)] for i in range(n)]
     C = [[[Bool(f"C_{i}_{j}_{t}") for t in range(T+1)] for j in range(m)] for i in range(n)]
     M = [[Bool(f"M_{i}_{j}") for j in range(m)] for i in range(n)]
     W = [[Bool(f"W_{i}_{j}") for j in range(m)] for i in range(n)]
     return Solver(), P, C, M, W
+def ler_tabuleiro():
+    #Essa é a função que constroi o tabuleiro onde '#' é uma parede,'S' é o jogador,'B' é a caixa e 'M' é a meta
+    print("\n Insira o tabuleiro linha por linha e digite 'f' para terminar:")
+    tabuleiro = []
+    caracteres_validos = {'#','S','B','M',' ','X'}
+    comprimento_referencia = None
+    while True:
+        linha = input().strip()
+        if linha.lower() == 'f':
+            break
+        if not linha:
+            print("Linha vazia ignorada, digite 'f' para terminar.")
+            continue
+        if not all(caractere in caracteres_validos for caractere in linha):
+            print(f"Erro: Use apenas os caracteres válidos: {', '.join(caracteres_validos)}")
+            continue
+        if comprimento_referencia is None:
+            comprimento_referencia = len(linha)
+        elif len(linha) != comprimento_referencia:
+            print(f"Erro: Todas as linhas devem ter {comprimento_referencia} colunas.")
+            continue
+        tabuleiro.append(linha)
+    return tabuleiro
+def validar_elementos_tabuleiro(tabuleiro):
+    #Temos que garantir que haverá apenas um jogador, além de o número de caixas e metas seram os mesmos, e maior que zero
+    jogador = sum(linha.count('S') for linha in tabuleiro)
+    caixas = sum(linha.count('B') for linha in tabuleiro)
+    metas = sum(linha.count('M') for linha in tabuleiro)
+    if jogador != 1:
+        raise ValueError(f"Erro: O tabuleiro deve ter exatamente 1 jogador ('S'). Encontrado: {jogador}.")
+    if caixas == 0:
+        raise ValueError("Erro: O tabuleiro deve ter pelo menos 1 caixa ('B').")
+    if metas == 0:
+        raise ValueError("Erro: O tabuleiro deve ter pelo menos 1 meta ('M').")
+    if caixas != metas:
+        raise ValueError(f"Erro: O número de caixas ('B') deve ser igual ao número de metas ('M'). "
+                         f"Caixas: {caixas}, Metas: {metas}.")
 
+    print("✅ Tabuleiro válido!")
+
+def restricoes(solver, P,C,M,W,tabuleiro,m,n,T):
+    #Configurando o tabuleiro
+    for i in range(n):
+        for j in range(m):
+            char = tabuleiro[i][j]
+            if char == '#':
+                solver.add(W[i][j])
+            elif char == 'M':
+                solver.add(M[i][j])
+            elif char in ['S','X']:
+                solver.add(P[i][j][0])
+            elif char == 'B':
+                solver.add(C[i][j][0])
+    #Exatamente um jogador em cada tempo
+    for t in range(T + 1):
+       solver.add(Exactly(*[P[i][j][t] for i in range(n) for j in range(m)],1)) 
+       #Nenhuma sobreposição de jogador e caixa
+       for i in range(n):
+           for j in range(m):
+               if tabuleiro == '#':
+                   for t in range(T + 1):
+                       solver.add(Not(P[i][j][t]))
+                       solver.add(Not(C[i][j][t]))
+    #Movimentação do jogador e das caixas
+    direcoes = [(0,1),(1,0),(0,-1),(-1,0)]
+    for t in range(T):
+        for i in range(n):
+            for j in range(m):
+                movimentos = []
+
+                for di, dj, in direcoes:
+                    ni, nj = i + di, j + dj
+
+                    if 0 <= ni < n and 0 <= nj < m:
+                        #Movimentos simples, sem empurrar uma caixa
+                        movimentos.append(And(
+                            P[i][j][t],
+                            Not(W[ni][nj]),
+                            Not(C[ni][nj][t]),
+                            P[ni][nj][t + 1],
+                            *[C[x][y][t] == C[x][y][t + 1] for x in range(n) for y in range(m)]
+                        ))
+
+                        #Movimentos empurrando uma caixa
+                        ni2, nj2, = ni + di , nj + dj
+                        if 0 <= ni2 < n and 0 <= nj2 < m:
+                            movimentos.append(And(
+                                P[i][j][t],
+                                C[ni][nj][t],
+                                Not(W[ni2][nj2]),
+                                Not(C[ni2][nj2][t]),
+                                P[ni][nj][t+1],
+                                C[ni2][nj2][t + 1],
+                                Not(C[ni][nj][t + 1]),
+                                *[C[x][y][t] == C[x][y][t + 1] for x in range(n) for y in range(m)
+                                if (x,y) not in [(ni,nj), (ni2,nj2)]]
+                            ))
+                if movimentos:
+                    solver.add(Implies(P[i][j][t], Or(*movimentos)))
+    #Todas as metas devem ter uma caixa!!
+    solver.add(And([
+        Implies(M[i][j], C[i][j][T])
+        for i in range(n) for j in range(m)
+    ]))
+def imprimir_solucao(modelo,P,C,M,W,n,m,T):
+    #Função para imprimirmos a solução
+    for t in range(T + 1):
+        print(f"\n--- Passo {t} ---")
+        for i in range(n):
+            linha = ""
+            for j in range(m):
+                parede = modelo.evaluate(W[i][j])
+                meta = modelo.evaluate(M[i][j])
+                caixa = modelo.evaluate(C[i][j][t])
+                jogador = modelo.evaluate(P[i][j][t])
+
+            if parede:
+                linha += "#"
+            elif jogador:
+                linha += "S"
+            elif caixa and meta:
+                linha += "*"
+            elif caixa:
+                linha += "B"
+            elif meta:
+                linha += "m"
+            else:
+                linha += "."
+        print(linha)
+def main():
+    print("=== Sokoban em Z3 ===")
+    #Loop para garantir que o tabuleiro de entrada seja válido
+    while True:
+        try:
+            tabuleiro = ler_tabuleiro()
+            validar_elementos_tabuleiro(tabuleiro)
+            break
+        except ValueError as erro:
+            print(f"\n{erro}")
+            print("Insira o tabuleiro novamente!!\n")
+    n, m = len(tabuleiro),len(tabuleiro[0])
+    #Aqui tentamos achar uma solução com o menor número de passoas possível
+    T = 1
+    T_max = 50
+    #Coloquei um limite de 50 passos para não ficar muito grande
+    while T <= T_max:
+        print(f"\nTestando com {T} passos:\n")
+        solver,P,C,M,W = inicializar(n,m,T)
+        restricoes(solver,P,C,M,W,tabuleiro,m,n,T)
+
+        if solver.check() == sat:
+            modelo = solver.model()
+            print(f"\n Solução encontrada em {T} passos!!")
+            imprimir_solucao(modelo, P,C,M,W,n,m,T)
+            break
+        else:
+            print(f"\nSem solução com {T} passos.")
+            T += 1
+    else:
+        print(f"Nenhuma solução foi encontrada dentro do número máximo de passos: {T_max}")
+if __name__ == "__main__":
+    main()
