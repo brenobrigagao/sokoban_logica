@@ -1,4 +1,16 @@
-Exemplo 1:
+# Solucionador de Sokoban
+
+Programa que soluciona mapas do Sokoban usando a satisfatibilidade da lógica proposicional.
+Gera soluções passo a passo mostrando cada turno até atingir o objetivo.
+
+## Como usar
+
+git clone https://github.com/brenobrigagao/sokoban_logica.git
+python examples.py
+
+## Exemplo
+
+### Input
 
 map_1 = [
     list("######"),
@@ -8,7 +20,7 @@ map_1 = [
     list("######")
 ]
 
-Solução:
+### Output
 
 === Example 1 ===
 
