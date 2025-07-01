@@ -1,36 +1,34 @@
 map_1 = [
     list("######"),
-    list("#..m.#"),
-    list("#.B..#"),
-    list("#..S.#"),
+    list("#   m#"),
+    list("#SB  #"),
+    list("#    #"),
     list("######")
 ]
 
 map_2 = [
-    list("#######"),
-    list("#..m..#"),
-    list("#.B.B.#"),
-    list("#..S..#"),
-    list("#..m..#"),
-    list("#######")
+    list("######"),
+    list("#x   #"),
+    list("#BBBm#"),
+    list("#m   #"),
+    list("######")
 ]
 
 map_3 = [
-    list("########"),
-    list("#..m..m#"),
-    list("#.B..B.#"),
-    list("#..S...#"),
-    list("#......#"),
-    list("########")
+    list("#####"),
+    list("#SBm#"),
+    list("#B  #"),
+    list("#m  #"),
+    list("#####")
 ]
 
 map_4 = [
-    list("#####"),
-    list("#mB.#"),
-    list("#.S.#"),
-    list("#.B.#"),
-    list("#.m.#"),
-    list("#####")
+    list("####### "),
+    list("##S##mm#"),
+    list("# BB Bm#"),
+    list("#   B  #"),
+    list("####  m#"),
+    list("   #####")
 ]
 
 map_5 = [
