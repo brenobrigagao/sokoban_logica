@@ -6,6 +6,7 @@ Gera soluções passo a passo mostrando cada turno até atingir o objetivo.
 ## Como usar
 ```bash
 git clone https://github.com/brenobrigagao/sokoban_logica.git
+cd sokoban_logica
 python examples.py
 ```
 ## Exemplo
