@@ -7,8 +7,7 @@ Gera soluções passo a passo mostrando cada turno até atingir o objetivo.
 ```bash
 git clone https://github.com/brenobrigagao/sokoban_logica.git
 python examples.py
-```bash
-
+```
 ## Exemplo
 
 ### Input
@@ -20,7 +19,7 @@ map_1 = [
     list("#..S.#"),
     list("######")
 ]
-
+```
 ### Output
 ```bash
 === Example 1 ===
