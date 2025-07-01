@@ -4,7 +4,7 @@ Programa que soluciona mapas do Sokoban usando a satisfatibilidade da lógica pr
 Gera soluções passo a passo mostrando cada turno até atingir o objetivo.
 
 ## Como usar
-
+```bash
 git clone https://github.com/brenobrigagao/sokoban_logica.git
 python examples.py
 
